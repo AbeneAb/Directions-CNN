@@ -6,6 +6,28 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 from tensorflow.keras.utils import to_categorical
 
+def augment_audio(audio, sample_rate):
+    # Pitch tuning
+    pitch_shift = np.random.uniform(low=-2.5, high=2.5)
+    audio_pitch_tuned = librosa.effects.pitch_shift(audio, sr=sample_rate, n_steps=pitch_shift)
+
+    # Time stretching
+    stretch_factor = np.random.uniform(low=0.8, high=1.2)
+    audio_time_stretched = librosa.effects.time_stretch(audio, rate=stretch_factor)
+
+    # Add noise
+    noise_factor = np.random.uniform(low=0.01, high=0.05)
+    white_noise = np.random.randn(len(audio))
+    audio_with_noise = audio + noise_factor * white_noise
+
+    # Time shifting
+    shift = np.random.randint(sample_rate * 2)
+    shift_audio = np.roll(audio, shift)
+
+    return [audio_pitch_tuned, audio_time_stretched, audio_with_noise, shift_audio]
+
+
+
 def preprocess_data(data_path, labels):
     mfccs_list = []  # store mfccs
     y = []  # labels will go here
@@ -16,9 +38,11 @@ def preprocess_data(data_path, labels):
             if filename.endswith('.wav'):
                 audio_path = os.path.join(label_dir, filename)
                 sound, sample_rate = librosa.load(audio_path)
-                mfcc = librosa.feature.mfcc(y=sound, sr=sample_rate)
-                mfccs_list.append(mfcc)
-                y.append(i)  # assign label index
+                augmented_sounds = augment_audio(sound, sample_rate)
+                for augmented_sound in augmented_sounds:
+                    mfcc = librosa.feature.mfcc(y=augmented_sound, sr=sample_rate)
+                    mfccs_list.append(mfcc)
+                    y.append(i)  # assign label index
 
     max_len = max(mfcc.shape[1] for mfcc in mfccs_list)
     X = np.zeros((len(mfccs_list), mfccs_list[0].shape[0], max_len))
