@@ -3,3 +3,4 @@ pydub
 python_speech_features
 numpy
 scikit-learn
+pyaudio
